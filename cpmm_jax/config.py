@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass
+from dataclasses import asdict, dataclass, field
 import json
 from pathlib import Path
 from typing import Any
@@ -85,12 +85,12 @@ class CheckpointConfig:
 
 @dataclass
 class ExperimentConfig:
-    model: ModelConfig = ModelConfig()
-    cpmm: CPMMConfig = CPMMConfig()
-    data: CodeDataConfig = CodeDataConfig()
-    train: TrainingConfig = TrainingConfig()
-    chat: ChatTuneConfig = ChatTuneConfig()
-    checkpoint: CheckpointConfig = CheckpointConfig()
+    model: ModelConfig = field(default_factory=ModelConfig)
+    cpmm: CPMMConfig = field(default_factory=CPMMConfig)
+    data: CodeDataConfig = field(default_factory=CodeDataConfig)
+    train: TrainingConfig = field(default_factory=TrainingConfig)
+    chat: ChatTuneConfig = field(default_factory=ChatTuneConfig)
+    checkpoint: CheckpointConfig = field(default_factory=CheckpointConfig)
 
 
 def to_json(config: ExperimentConfig) -> str:
