@@ -160,10 +160,6 @@ class CPMMCodeModel(nn.Module):
         gate_dense = nn.Dense(1, name="gate_dense")
         write_dense = nn.Dense(self.config.d_model, name="write_dense")
 
-        # Energy decoder
-        ed_dense1 = nn.Dense(self.config.d_model, name="ed_dense1")
-        ed_dense2 = nn.Dense(self.config.d_model, name="ed_dense2")
-
         # Relation mixer
         relation_mixer = SlotRelationMixer(
             self.config.d_model, self.config.relation_rank, name="slot_relation_mixer"
@@ -178,7 +174,6 @@ class CPMMCodeModel(nn.Module):
         _ = fb_proj(_dummy_ev)
         _ = slot_key(_dummy_slot)
         _ = ev_key(_dummy_ev)
-        _ = ed_dense2(nn.gelu(ed_dense1(_dummy_slot.mean(axis=1))))
         _ = relation_mixer(_dummy_slot)
 
         # ── Per-chunk processing via lax.while_loop ────────────────────────
@@ -230,13 +225,12 @@ class CPMMCodeModel(nn.Module):
             # Energy refinement (unrolled, no lax.scan needed for 2 steps)
             for _ in range(self.config.refinement_steps):
                 slot_summary = candidate_slots.mean(axis=1)
-                reconstruction = ed_dense2(nn.gelu(ed_dense1(slot_summary)))
-                e_obs = jnp.mean((reconstruction - evidence) ** 2)
+                e_obs = jnp.mean((slot_summary - evidence) ** 2)
                 e_dyn = jnp.mean((candidate_slots - predicted_slots) ** 2)
                 e_sparse = jnp.mean(gates)
                 energy = e_obs + 0.35 * e_dyn + 0.02 * e_sparse
                 grad = jax.grad(lambda s, _ev=evidence, _ps=predicted_slots, _g=gates: (
-                    jnp.mean((ed_dense2(nn.gelu(ed_dense1(s.mean(axis=1)))) - _ev) ** 2)
+                    jnp.mean((s.mean(axis=1) - _ev) ** 2)
                     + 0.35 * jnp.mean((s - _ps) ** 2)
                     + 0.02 * jnp.mean(_g)
                 ))(candidate_slots)
