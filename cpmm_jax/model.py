@@ -151,6 +151,11 @@ class CPMMCodeModel(nn.Module):
             [nn.Dense(self.config.d_model), nn.gelu, nn.Dense(self.config.num_graph_values)],
             name="answer_head",
         )
+        self.slot_seed = self.param(
+            "slot_seed",
+            nn.initializers.normal(stddev=0.02),
+            (self.config.num_slots, self.config.d_model),
+        )
 
     def _energy(
         self,
@@ -229,13 +234,8 @@ class CPMMCodeModel(nn.Module):
         tvi_chunks = reshape_chunks(tvi_p)
         tvm_chunks = reshape_chunks(tvm_p)
 
-        slot_seed = self.param(
-            "slot_seed",
-            nn.initializers.normal(stddev=0.02),
-            (self.config.num_slots, self.config.d_model),
-        )
         initial_slots = jnp.broadcast_to(
-            slot_seed[None, :, :],
+            self.slot_seed[None, :, :],
             (batch_size, self.config.num_slots, self.config.d_model),
         )
         initial_graph = self.graph_memory.init_state(batch_size)
